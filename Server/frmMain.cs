@@ -29,7 +29,8 @@ namespace TSAddinInCSServer
                     bool ret = WtsApi32.WTSVirtualChannelWrite(mHandle, buffer, bytesRead, ref written);
 
                     if (!ret || written == bytesRead)
-                        MessageBox.Show("Sent!", "OK", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        //MessageBox.Show("Sent!", "OK", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        ;
                     else
                         MessageBox.Show("Bumm! Somethings gone wrong!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);   
                 }
@@ -62,12 +63,15 @@ namespace TSAddinInCSServer
             {
                 byte[] data = new byte[1600];
                 int readed = 0;
-                if (WtsApi32.WTSVirtualChannelRead(Me.mHandle, 2000, data, data.Length, ref readed))
+                if (WtsApi32.WTSVirtualChannelRead(Me.mHandle, 0, data, data.Length, ref readed))
                 {
                     if (readed > 0)
                     {
                         byte[] buff = new byte[readed];
                         Buffer.BlockCopy(data, 0, buff, 0, readed);
+
+                        MessageBox.Show(System.Text.Encoding.Default.GetString(buff));
+
                         lock (Me.maindata)
                         {
                             Me.maindata.AddRange(buff);

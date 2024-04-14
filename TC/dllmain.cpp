@@ -8,6 +8,7 @@
 PCHANNEL_ENTRY_POINTS entryPoints;
 unsigned long OpenChannel = 0;
 void* Channel = nullptr;
+char ok[2] = { 'O', 'K' };
 
 void __stdcall VirtualChannelOpenEventProc(
 	unsigned long handle,
@@ -17,23 +18,46 @@ void __stdcall VirtualChannelOpenEventProc(
 	unsigned int totalLength, 
 	unsigned int dataFlags)
 {
-	char* s = (char*)malloc(dataLength+1);
+	DWORD size = 1;
+
 	if (dataLength == totalLength)
-	switch (event)
 	{
+		char* s = (char*)malloc(dataLength + 1);
+
+		switch (event)
+		{
 		case CHANNEL_EVENT_DATA_RECEIVED:
-		//	switch (dataFlags & CHANNEL_FLAG_ONLY)
-		//	{
-		//		case CHANNEL_FLAG_ONLY:
-		//			break;
-		//	}
+			/*switch (dataFlags & CHANNEL_FLAG_ONLY)
+			{
+			case CHANNEL_FLAG_ONLY:
+				break;
+			case CHANNEL_FLAG_FIRST:
+				break;
+			case CHANNEL_FLAG_MIDDLE:
+				break;
+			case CHANNEL_FLAG_LAST:
+				break;
+			}*/
 
 			memcpy(s, data, dataLength);
 			s[dataLength] = 0;
 			MessageBoxA(0, s, "Info", MB_ICONINFORMATION);
+		
+			if (entryPoints->pVirtualChannelWrite(OpenChannel, &ok[0], 2, &size) == CHANNEL_RC_OK)
+			{
+				OutputDebugStringA("OK is sent back!");
+			}
+
+			break;
+		case CHANNEL_EVENT_WRITE_COMPLETE:	
+			break;
+		case CHANNEL_EVENT_WRITE_CANCELLED:
 			break;
 		default:
 			break;
+		}
+
+		free(s);
 	}
 }
 
@@ -53,6 +77,7 @@ void __stdcall VirtualChannelInitEventProc(void* initHandle, unsigned int event,
 			OpenChannel = 0;
 			break;
 		case CHANNEL_EVENT_TERMINATED:
+			LocalFree((HLOCAL)entryPoints);
 			break;
 		default:
 			break;
@@ -88,10 +113,10 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 {
     switch (ul_reason_for_call)
     {
-    case DLL_PROCESS_ATTACH:
-    case DLL_THREAD_ATTACH:
-    case DLL_THREAD_DETACH:
-    case DLL_PROCESS_DETACH:
+		case DLL_PROCESS_ATTACH:
+		case DLL_THREAD_ATTACH:
+		case DLL_THREAD_DETACH:
+		case DLL_PROCESS_DETACH:
         break;
     }
     return TRUE;
