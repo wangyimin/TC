@@ -4,64 +4,63 @@
 #include "cchannel.h"
 //#include <stdio.h>
 #include <stdlib.h>
+#include <string> 
+using namespace std;
 
 PCHANNEL_ENTRY_POINTS entryPoints;
-unsigned long OpenChannel = 0;
-void* Channel = nullptr;
-char ok[2] = { 'O', 'K' };
+DWORD OpenChannel = 0;
+LPVOID Channel = nullptr;
+const char* REPLY_OK = "OK";
 
 void __stdcall VirtualChannelOpenEventProc(
-	unsigned long handle,
-	unsigned int event, 
-	void* data, 
-	unsigned int dataLength, 
-	unsigned int totalLength, 
-	unsigned int dataFlags)
+	DWORD handle,
+	UINT event,
+	LPVOID data,
+	UINT32 dataLength,
+	UINT32 totalLength,
+	UINT32 dataFlags)
 {
-	DWORD size = 1;
+	char* s = (char*)LocalAlloc(LPTR, totalLength + 1);
 
-	if (dataLength == totalLength)
+	switch (event)
 	{
-		char* s = (char*)malloc(dataLength + 1);
-
-		switch (event)
+	case CHANNEL_EVENT_DATA_RECEIVED:
+		/*switch (dataFlags & CHANNEL_FLAG_ONLY)
 		{
-		case CHANNEL_EVENT_DATA_RECEIVED:
-			/*switch (dataFlags & CHANNEL_FLAG_ONLY)
-			{
-			case CHANNEL_FLAG_ONLY:
-				break;
-			case CHANNEL_FLAG_FIRST:
-				break;
-			case CHANNEL_FLAG_MIDDLE:
-				break;
-			case CHANNEL_FLAG_LAST:
-				break;
-			}*/
+		case CHANNEL_FLAG_ONLY:
+			break;
+		case CHANNEL_FLAG_FIRST:
+			break;
+		case CHANNEL_FLAG_MIDDLE:
+			break;
+		case CHANNEL_FLAG_LAST:
+			break;
+		}*/
 
-			memcpy(s, data, dataLength);
-			s[dataLength] = 0;
-			MessageBoxA(0, s, "Info", MB_ICONINFORMATION);
-		
-			if (entryPoints->pVirtualChannelWrite(OpenChannel, &ok[0], 2, &size) == CHANNEL_RC_OK)
-			{
-				OutputDebugStringA("OK is sent back!");
-			}
+		memcpy(s, data, totalLength);
+		MessageBoxA(0, s, "Info", MB_ICONINFORMATION);
 
-			break;
-		case CHANNEL_EVENT_WRITE_COMPLETE:	
-			break;
-		case CHANNEL_EVENT_WRITE_CANCELLED:
-			break;
-		default:
-			break;
+		if (entryPoints->pVirtualChannelWrite(OpenChannel, (LPVOID)REPLY_OK, (ULONG)strlen(REPLY_OK), (LPVOID)REPLY_OK) == CHANNEL_RC_OK)
+		{
+			OutputDebugStringA("OK is sent back!");
 		}
 
-		free(s);
+		break;
+	case CHANNEL_EVENT_WRITE_COMPLETE:
+		//OutputDebugStringA(to_string(totalLength).c_str());
+		memcpy(s, data, totalLength);
+		OutputDebugStringA(s);
+		break;
+	case CHANNEL_EVENT_WRITE_CANCELLED:
+		break;
+	default:
+		break;
 	}
+
+	LocalFree(s);
 }
 
-void __stdcall VirtualChannelInitEventProc(void* initHandle, unsigned int event, void* data, unsigned int dataLength)
+void __stdcall VirtualChannelInitEventProc(LPVOID initHandle, UINT event, LPVOID data, UINT dataLength)
 {
 	switch (event)
 	{
