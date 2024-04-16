@@ -22,15 +22,17 @@ namespace TSAddinInCSServer
                 try
                 {
                     FileStream fs = File.OpenRead(ofdPickUpFile.FileName);
-                    byte[] buffer = new byte[1024];
+                    byte[] buffer = new byte[5000];
                     int bytesRead = 0;
-                    bytesRead = fs.Read(buffer, 0, 1024);
+                    bytesRead = fs.Read(buffer, 0, 5000);
                     int written = 0;
                     bool ret = WtsApi32.WTSVirtualChannelWrite(mHandle, buffer, bytesRead, ref written);
 
                     if (!ret || written == bytesRead)
+                    {
                         //MessageBox.Show("Sent!", "OK", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         ;
+                    }
                     else
                         MessageBox.Show("Bumm! Somethings gone wrong!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);   
                 }

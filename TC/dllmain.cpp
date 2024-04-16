@@ -7,12 +7,51 @@
 #include <string> 
 using namespace std;
 
+class Store {
+public:
+	LPVOID data = 0;
+	DWORD length = 0;
+
+	void Append(LPVOID data, DWORD length, DWORD total)
+	{
+		if (!this->data)
+		{
+			this->data = LocalAlloc(LPTR, total + 1);
+			memcpy(this->data, data, length);
+			
+		}
+		else
+		{
+			char* tmp = (char*)this->data;
+			memcpy_s(tmp + this->length, length, data, length);
+		}
+		this->length += length;
+	}
+
+	void Clear()
+	{
+		if (this->length > 0)
+		{
+			LocalFree(this->data);
+			this->data = 0;
+			this->length = 0;
+		}
+	}
+
+	~Store()
+	{
+		Clear();
+	}
+};
+
+
 PCHANNEL_ENTRY_POINTS entryPoints;
 DWORD OpenChannel = 0;
 LPVOID Channel = nullptr;
 const char* CHANNEL_NAME = "TSCS";
 const char* REPLY_OK = "OK";
-const char* NOTIFY = "W"; // don't let NOTIFY have more bytes than REPLY_OK
+const char* NOTIFY = "COMPLETED"; 
+Store* store = new Store();
 
 void __stdcall VirtualChannelOpenEventProc(
 	DWORD handle,
@@ -22,29 +61,24 @@ void __stdcall VirtualChannelOpenEventProc(
 	UINT32 totalLength,
 	UINT32 dataFlags)
 {
-	char* s = (char*)LocalAlloc(LPTR, totalLength + 1);
+	char* s = (char*)LocalAlloc(LPTR, CHANNEL_CHUNK_LENGTH + 1);
 
 	switch (event)
 	{
 	case CHANNEL_EVENT_DATA_RECEIVED:
-		/*switch (dataFlags & CHANNEL_FLAG_ONLY)
-		{
-		case CHANNEL_FLAG_ONLY:
-			break;
-		case CHANNEL_FLAG_FIRST:
-			break;
-		case CHANNEL_FLAG_MIDDLE:
-			break;
-		case CHANNEL_FLAG_LAST:
-			break;
-		}*/
+		store->Append(data, dataLength, totalLength);
 
-		memcpy(s, data, totalLength);
-		MessageBoxA(0, s, "RECEIVED MESSAGE", MB_ICONINFORMATION);
-
-		if (entryPoints->pVirtualChannelWrite(OpenChannel, (LPVOID)REPLY_OK, (ULONG)strlen(REPLY_OK), (LPVOID)NOTIFY) == CHANNEL_RC_OK)
+		//if ((dataFlags & CHANNEL_FLAG_ONLY) || (dataFlags & CHANNEL_FLAG_LAST))
+		if (store->length == totalLength)
 		{
-			OutputDebugStringA("OK is sent back!");
+			//output
+			MessageBoxA(0, (char*)store->data, "RECEIVED MESSAGE", MB_ICONINFORMATION);
+			store->Clear();
+
+			if (entryPoints->pVirtualChannelWrite(OpenChannel, (LPVOID)REPLY_OK, (ULONG)strlen(REPLY_OK), (LPVOID)NOTIFY) == CHANNEL_RC_OK)
+			{
+				OutputDebugStringA("OK is sent back!");
+			}
 		}
 
 		break;
@@ -81,6 +115,7 @@ void __stdcall VirtualChannelInitEventProc(LPVOID initHandle, UINT event, LPVOID
 			break;
 		case CHANNEL_EVENT_TERMINATED:
 			LocalFree((HLOCAL)entryPoints);
+			delete store;
 			break;
 		default:
 			break;
@@ -124,4 +159,3 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     }
     return TRUE;
 }
-
