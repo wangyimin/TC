@@ -10,7 +10,9 @@ using namespace std;
 PCHANNEL_ENTRY_POINTS entryPoints;
 DWORD OpenChannel = 0;
 LPVOID Channel = nullptr;
+const char* CHANNEL_NAME = "TSCS";
 const char* REPLY_OK = "OK";
+const char* NOTIFY = "W"; // don't let NOTIFY have more bytes than REPLY_OK
 
 void __stdcall VirtualChannelOpenEventProc(
 	DWORD handle,
@@ -38,17 +40,19 @@ void __stdcall VirtualChannelOpenEventProc(
 		}*/
 
 		memcpy(s, data, totalLength);
-		MessageBoxA(0, s, "Info", MB_ICONINFORMATION);
+		MessageBoxA(0, s, "RECEIVED MESSAGE", MB_ICONINFORMATION);
 
-		if (entryPoints->pVirtualChannelWrite(OpenChannel, (LPVOID)REPLY_OK, (ULONG)strlen(REPLY_OK), (LPVOID)REPLY_OK) == CHANNEL_RC_OK)
+		if (entryPoints->pVirtualChannelWrite(OpenChannel, (LPVOID)REPLY_OK, (ULONG)strlen(REPLY_OK), (LPVOID)NOTIFY) == CHANNEL_RC_OK)
 		{
 			OutputDebugStringA("OK is sent back!");
 		}
 
 		break;
 	case CHANNEL_EVENT_WRITE_COMPLETE:
+		// Get pUserData(set by last parameter of pVirtualChannelWrite)
 		//OutputDebugStringA(to_string(totalLength).c_str());
-		memcpy(s, data, totalLength);
+		ZeroMemory(s, strlen(NOTIFY)+1);
+		memcpy(s, data, strlen(NOTIFY));
 		OutputDebugStringA(s);
 		break;
 	case CHANNEL_EVENT_WRITE_CANCELLED:
@@ -67,7 +71,7 @@ void __stdcall VirtualChannelInitEventProc(LPVOID initHandle, UINT event, LPVOID
 		case CHANNEL_EVENT_INITIALIZED:
 			break;
 		case CHANNEL_EVENT_CONNECTED:
-			entryPoints->pVirtualChannelOpen(initHandle, &OpenChannel, (PCHAR)"TSCS", VirtualChannelOpenEventProc);
+			entryPoints->pVirtualChannelOpen(initHandle, &OpenChannel, (PCHAR)CHANNEL_NAME, VirtualChannelOpenEventProc);
 			break;
 		case CHANNEL_EVENT_V1_CONNECTED:
 			break;
@@ -94,11 +98,11 @@ EXTERN_C _declspec(dllexport) BOOL VCAPITYPE VirtualChannelEntry(PCHANNEL_ENTRY_
 
 		CHANNEL_DEF cd;
 		ZeroMemory(&cd, sizeof(CHANNEL_DEF));
-		strcpy_s(cd.name, strlen("TSCS") + 1, "TSCS");
+		strcpy_s(cd.name, strlen(CHANNEL_NAME) + 1, CHANNEL_NAME);
 
 		if (entry->pVirtualChannelInit(&Channel, &cd, 1, VIRTUAL_CHANNEL_VERSION_WIN2000, VirtualChannelInitEventProc) == CHANNEL_RC_OK)
 		{
-			OutputDebugStringW(L"TCSC channel is initialized.");
+			OutputDebugStringW(L"Channel is initialized.");
 			return true;
 		}
 	}
