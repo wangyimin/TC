@@ -8,6 +8,15 @@
 #define PCH_H
 
 // プリコンパイルするヘッダーをここに追加します
+
+#include <windows.h>
+#include <cchannel.h>
+#include <stdlib.h>
+#include <string> 
 #include "framework.h"
+
+using namespace std;
+
+void GetUserInformation(char user[]);
 
 #endif //PCH_H
