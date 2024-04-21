@@ -14,7 +14,7 @@ void Store::Append(LPVOID data, DWORD length, DWORD total) noexcept
 	}
 	else
 	{
-		char* tmp = (char*)this->data;
+		LPSTR tmp = (LPSTR)this->data;
 		memcpy_s(tmp + this->length, length, data, length);
 	}
 

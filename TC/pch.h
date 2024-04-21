@@ -19,6 +19,6 @@
 
 using namespace std;
 
-BOOL GetUserInformation(char user[]);
+BOOL GetUserInformation(CHAR user[]);
 
 #endif //PCH_H

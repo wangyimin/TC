@@ -3,15 +3,15 @@
 #include "pch.h"
 #include "Processor.h"
 
-const char* CHANNEL_NAME = "TSCS";
+LPCSTR CHANNEL_NAME = "TSCS";
 
 PCHANNEL_ENTRY_POINTS entryPoints;
 LPVOID initChannel = nullptr;
 DWORD openChannel = 0;
 
-Processor* processor = new Processor();
+extern IProcessor* processor;
 
-BOOL GetUserInformation(char user[])
+BOOL GetUserInformation(CHAR user[])
 {
 	DWORD size = sizeof(user);
 	ZeroMemory(user, size);
@@ -26,7 +26,7 @@ VOID VCAPITYPE ChannelOpenEventProc(
 	UINT32 totalLength,
 	UINT32 dataFlags)
 {
-	char* s = (char*)LocalAlloc(LPTR, CHANNEL_CHUNK_LENGTH + 1);
+	LPSTR s = (LPSTR)LocalAlloc(LPTR, CHANNEL_CHUNK_LENGTH + 1);
 
 	switch (event)
 	{
@@ -34,9 +34,9 @@ VOID VCAPITYPE ChannelOpenEventProc(
 		processor->Process(pData, dataLength, totalLength);
 
 		//if ((dataFlags & CHANNEL_FLAG_ONLY) || (dataFlags & CHANNEL_FLAG_LAST))
-		if (processor->IsComplete())
+		if (processor->IsCompleted())
 		{
-			char* reply = processor->Output();
+			LPSTR reply = processor->Output();
 
 			if (reply)
 				if (entryPoints->pVirtualChannelWrite(
