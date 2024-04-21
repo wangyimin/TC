@@ -1,25 +1,21 @@
 ﻿// pch.cpp: プリコンパイル済みヘッダーに対応するソース ファイル
 
 #include "pch.h"
-#include "Store.h"
+#include "Processor.h"
 
 const char* CHANNEL_NAME = "TSCS";
-// reply message to server
-const char* REPLY_OK = "OK";
-// notify message for WRITE COMPLETE EVENT
-const char* NOTIFY = "COMPLETED";
 
 PCHANNEL_ENTRY_POINTS entryPoints;
 LPVOID initChannel = nullptr;
 DWORD openChannel = 0;
 
-Store* store = new Store();
+Processor* processor = new Processor();
 
-void GetUserInformation(char user[])
+BOOL GetUserInformation(char user[])
 {
 	DWORD size = sizeof(user);
 	ZeroMemory(user, size);
-	GetUserNameA(user, &size);
+	return GetUserNameA(user, &size);
 }
 
 VOID VCAPITYPE ChannelOpenEventProc(
@@ -35,29 +31,28 @@ VOID VCAPITYPE ChannelOpenEventProc(
 	switch (event)
 	{
 	case CHANNEL_EVENT_DATA_RECEIVED:
-		store->Append(pData, dataLength, totalLength);
+		processor->Process(pData, dataLength, totalLength);
 
 		//if ((dataFlags & CHANNEL_FLAG_ONLY) || (dataFlags & CHANNEL_FLAG_LAST))
-		if (store->length == totalLength)
+		if (processor->IsComplete())
 		{
-			//output
-			MessageBoxA(0, (char*)store->data, "RECEIVED MESSAGE", MB_ICONINFORMATION);
-			store->Clear();
+			char* reply = processor->Output();
 
-			if (entryPoints->pVirtualChannelWrite(
-				openChannel, (LPVOID)REPLY_OK, (ULONG)strlen(REPLY_OK), (LPVOID)NOTIFY) == CHANNEL_RC_OK)
-			{
-				OutputDebugStringA("OK is sent back!");
-			}
+			if (reply)
+				if (entryPoints->pVirtualChannelWrite(
+						openChannel, reply, (ULONG)strlen(reply), NULL) == CHANNEL_RC_OK)
+				{
+					OutputDebugStringA((string(reply) + string(" is sent back!")).c_str());
+				}
 		}
 
 		break;
 	case CHANNEL_EVENT_WRITE_COMPLETE:
 		// Get pUserData(set by last parameter of pVirtualChannelWrite)
 		//OutputDebugStringA(to_string(totalLength).c_str());
-		//ZeroMemory(s, strlen(NOTIFY)+1);
-		memcpy(s, pData, strlen(NOTIFY));
-		OutputDebugStringA(s);
+
+		//memcpy(s, pData, strlen(processor->GetNotify()));
+		//OutputDebugStringA(s);
 		break;
 	case CHANNEL_EVENT_WRITE_CANCELLED:
 		break;
@@ -89,8 +84,8 @@ VOID VCAPITYPE ChannelInitEventProc(
 		openChannel = 0;
 		break;
 	case CHANNEL_EVENT_TERMINATED:
-		LocalFree((HLOCAL)entryPoints);
-		delete store;
+		LocalFree(entryPoints);
+		delete processor;
 		break;
 	default:
 		break;

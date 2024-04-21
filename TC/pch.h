@@ -13,10 +13,12 @@
 #include <cchannel.h>
 #include <stdlib.h>
 #include <string> 
+#include <map>
+#include <cassert>
 #include "framework.h"
 
 using namespace std;
 
-void GetUserInformation(char user[]);
+BOOL GetUserInformation(char user[]);
 
 #endif //PCH_H
